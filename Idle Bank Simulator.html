@@ -1,0 +1,166 @@
+# Idle Bank Simulator
+
+A small idle-style web app that simulates a continuously growing bank balance.
+This project is for fun and visualization only and is not connected to any real financial institution.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idle Bank Simulator</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
+    background: #1e1e2f;
+    color: #00ffcc;
+  }
+
+  h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+  }
+
+  .balance-container {
+    font-size: 4em;
+    display: flex;
+  }
+
+  .digit {
+    position: relative;
+    width: 1ch;
+    height: 1em;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .digit span {
+    display: block;
+    position: absolute;
+    width: 100%;
+    transition: transform 0.2s linear;
+  }
+
+  .controls {
+    margin-top: 20px;
+  }
+
+  input[type="number"] {
+    font-size: 1em;
+    padding: 5px;
+  }
+
+  button {
+    font-size: 1em;
+    padding: 5px 10px;
+    margin-left: 5px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Dagger's Bank</h1>
+<div class="balance-container" id="balanceDisplay"></div>
+
+<div class="controls">
+  <!-- Deposit -->
+  <input type="number" id="depositAmount" placeholder="Deposit £" step="0.01">
+  <button onclick="depositClicked()">Deposit</button>
+
+  <!-- Withdraw -->
+  <input type="number" id="withdrawAmount" placeholder="Withdraw £" step="0.01">
+  <button onclick="withdrawClicked()">Withdraw</button>
+</div>
+
+
+<script>
+const decimals = 8;
+const rate = 0.04; // 4% AER
+const secondsInYear = 365 * 24 * 60 * 60;
+const balanceDisplay = document.getElementById('balanceDisplay');
+
+// Load saved data or initialize
+let storedData = JSON.parse(localStorage.getItem('bankData')) || {
+    balance: 1000,
+    lastTimestamp: Date.now()
+};
+let balance = storedData.balance;
+let lastTimestamp = storedData.lastTimestamp;
+
+// Format with commas
+function formatBalance(num) {
+    const parts = num.toFixed(decimals).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return '£' + parts.join('.');
+}
+
+// Update display
+function updateDisplay() {
+    balanceDisplay.innerText = formatBalance(balance);
+}
+
+// Save to localStorage
+function saveData() {
+    localStorage.setItem('bankData', JSON.stringify({
+        balance: balance,
+        lastTimestamp: lastTimestamp
+    }));
+}
+
+// Update balance for elapsed time
+function updateBalanceFromElapsed() {
+    const now = Date.now();
+    const deltaSeconds = (now - lastTimestamp) / 1000;
+    balance *= Math.exp(rate * (deltaSeconds / secondsInYear));
+    lastTimestamp = now;
+    saveData();
+}
+
+// Animate balance continuously
+function animate() {
+    updateBalanceFromElapsed();
+    updateDisplay();
+    requestAnimationFrame(animate);
+}
+
+// Deposit / Withdraw functions triggered by buttons
+function depositClicked() {
+    const input = document.getElementById('depositAmount');
+    const amount = parseFloat(input.value);
+    if(!isNaN(amount) && amount > 0){
+        updateBalanceFromElapsed();
+        balance += amount;
+        saveData();
+        updateDisplay();
+        input.value = '';
+    }
+}
+
+function withdrawClicked() {
+    const input = document.getElementById('withdrawAmount');
+    const amount = parseFloat(input.value);
+    if(!isNaN(amount) && amount > 0){
+        updateBalanceFromElapsed();
+        balance -= amount;
+        if(balance < 0) balance = 0;
+        saveData();
+        updateDisplay();
+        input.value = '';
+    }
+}
+
+// Initialize
+updateBalanceFromElapsed();
+updateDisplay();
+requestAnimationFrame(animate);
+</script>
+
+
+</body>
+</html>
